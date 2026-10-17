@@ -58,6 +58,7 @@ var S = {
     role: '役割',
     roles: ['父', '母'],
     url: '接続先URL',
+    changeUrl: '接続先を変える（ふだんは不要）',
     token: '合言葉',
     queue: '未送信',
     version: '版',
@@ -74,7 +75,7 @@ var S = {
     saveSettings: '設定を保存',
     connected: '接続できました',
     checking: '確認しています…',
-    needAll: '接続先URLと合言葉を入れてください',
+    needAll: '合言葉を入れてください',
     noUpdate: '最新の版です'
   },
   stub: 'この画面は次の段階で作ります'

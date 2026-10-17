@@ -46,8 +46,12 @@ function settings() {
   return store.get(KEY_SETTINGS, { role: '', url: '', token: '' });
 }
 
+function gasUrl(s) {
+  return s.url || DEFAULT_GAS_URL;
+}
+
 function settingsReady(s) {
-  return Boolean(s.url && s.token);
+  return Boolean(gasUrl(s) && s.token);
 }
 
 async function api(action, payload) {
@@ -61,7 +65,7 @@ async function api(action, payload) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), API_TIMEOUT_MS);
   try {
-    const res = await fetch(s.url, {
+    const res = await fetch(gasUrl(s), {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body,
@@ -189,12 +193,13 @@ function renderSettings() {
   }));
 
   const noFix = { autocapitalize: 'off', autocorrect: 'off', spellcheck: 'false', autocomplete: 'off' };
-  const url = el('input', Object.assign({ id: 'set-url', type: 'url', inputmode: 'url', value: s.url }, noFix));
-  const token = el('input', Object.assign({ id: 'set-token', type: 'password', value: s.token }, noFix));
+  const url = el('input', Object.assign({ id: 'set-url', type: 'url', inputmode: 'url', value: gasUrl(s) }, noFix));
+  const token = el('input', Object.assign({ id: 'set-token', type: 'text', value: s.token }, noFix));
 
   async function saveSettings() {
-    const next = Object.assign(settings(), { url: url.value.trim(), token: token.value.trim() });
-    url.value = next.url;
+    const typed = url.value.trim();
+    const next = Object.assign(settings(), { url: typed === DEFAULT_GAS_URL ? '' : typed, token: token.value.trim() });
+    url.value = gasUrl(next);
     token.value = next.token;
     if (!settingsReady(next)) return say(S.settings.needAll, true);
     if (!store.set(KEY_SETTINGS, next)) return say(S.today.localSaveFailed, true);
@@ -215,8 +220,10 @@ function renderSettings() {
       el('label', { text: S.settings.role }),
       el('div', { class: 'seg' }, ...roleButtons),
       s.role ? null : el('p', { class: 'msg error', text: S.settings.chooseRole }),
-      el('label', { for: 'set-url', text: S.settings.url }), url,
       el('label', { for: 'set-token', text: S.settings.token }), token,
+      el('details', s.url ? { open: true } : {},
+        el('summary', { text: S.settings.changeUrl }),
+        el('label', { for: 'set-url', text: S.settings.url }), url),
       el('div', { class: 'row' }, el('button', { class: 'primary', text: S.settings.saveSettings, onclick: saveSettings })),
       msg),
     el('h2', { text: S.settings.queue }),

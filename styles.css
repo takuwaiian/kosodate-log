@@ -1,0 +1,52 @@
+:root {
+  --bg: #f7f5f0;
+  --card: #ffffff;
+  --ink: #2b2b2b;
+  --sub: #6b6b6b;
+  --line: #e2ddd3;
+  --accent: #3f7d6e;
+  --accent-ink: #ffffff;
+  --warn: #b5642a;
+  --band: #fff4dc;
+  --tab-h: 64px;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--ink); }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif;
+  font-size: 17px; line-height: 1.5;
+  padding: env(safe-area-inset-top) 0 calc(var(--tab-h) + env(safe-area-inset-bottom));
+  -webkit-text-size-adjust: 100%;
+}
+#bands:empty { display: none; }
+.band { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 16px; background: var(--band); border-bottom: 1px solid var(--line); font-size: 15px; }
+.band.error { color: var(--warn); }
+main { padding: 16px; max-width: 640px; margin: 0 auto; }
+h1 { font-size: 22px; margin: 4px 0 16px; }
+h2 { font-size: 17px; margin: 20px 0 8px; color: var(--sub); }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; margin-bottom: 12px; }
+.stub { color: var(--sub); font-size: 15px; }
+label { display: block; font-weight: 600; margin: 14px 0 6px; }
+input[type=text], input[type=url], input[type=password] {
+  width: 100%; font-size: 17px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: #fff; color: var(--ink);
+}
+.seg { display: flex; gap: 8px; }
+.seg button { flex: 1; }
+button {
+  font: inherit; font-size: 17px; min-height: 44px; padding: 8px 14px; border-radius: 10px;
+  border: 1px solid var(--accent); background: #fff; color: var(--accent); cursor: pointer;
+}
+button.primary, button[aria-pressed=true] { background: var(--accent); color: var(--accent-ink); }
+button:disabled { opacity: 0.4; cursor: default; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+.msg { min-height: 1.5em; margin-top: 10px; font-size: 15px; }
+.msg.error { color: var(--warn); }
+.meta { color: var(--sub); font-size: 14px; margin-top: 18px; }
+#tabs {
+  position: fixed; left: 0; right: 0; bottom: 0; display: flex;
+  height: calc(var(--tab-h) + env(safe-area-inset-bottom)); padding-bottom: env(safe-area-inset-bottom);
+  background: var(--card); border-top: 1px solid var(--line);
+}
+#tabs button { flex: 1; border: 0; border-radius: 0; background: none; color: var(--sub); font-size: 13px; min-height: var(--tab-h); }
+#tabs button[aria-current=page] { color: var(--accent); font-weight: 700; }
+.fatal { padding: 40px 20px; text-align: center; font-size: 18px; }

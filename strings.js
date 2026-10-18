@@ -26,6 +26,7 @@ var S = {
     note: 'ひとこと',
     school: '学校のこと',
     askPrevDay: '前日分として記録しますか？',
+    saved: '保存しました',
     noChange: '変更はありません',
     localSaveFailed: 'この端末に保存できませんでした',
     chooseRole: '役割を選んでください'
@@ -76,7 +77,9 @@ var S = {
     connected: '接続できました',
     checking: '確認しています…',
     needAll: '合言葉を入れてください',
-    noUpdate: '最新の版です'
+    noUpdate: '最新の版です',
+    statePending: '未送信',
+    stateSending: '送信中'
   },
   stub: 'この画面は次の段階で作ります'
 };

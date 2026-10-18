@@ -50,3 +50,24 @@ button:disabled { opacity: 0.4; cursor: default; }
 #tabs button { flex: 1; border: 0; border-radius: 0; background: none; color: var(--sub); font-size: 13px; min-height: var(--tab-h); }
 #tabs button[aria-current=page] { color: var(--accent); font-weight: 700; }
 .fatal { padding: 40px 20px; text-align: center; font-size: 18px; }
+textarea {
+  width: 100%; font: inherit; font-size: 17px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: #fff; color: var(--ink); resize: vertical;
+}
+.card label:first-child { margin-top: 0; }
+.ladder-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.ifthen { margin: 6px 0 0; font-size: 15px; }
+.sub { color: var(--sub); font-size: 14px; }
+.other { margin: 8px 0 0; color: var(--sub); font-size: 15px; }
+.row.tight { margin-top: 10px; gap: 6px; flex-wrap: nowrap; }
+.row.tight button { flex: 1; padding: 8px 2px; font-size: 15px; white-space: nowrap; }
+button.did { font-weight: 700; }
+button.wide { flex: 1; }
+.tag { font-size: 13px; padding: 2px 8px; border-radius: 999px; background: var(--band); }
+.tag.warn { color: var(--warn); }
+.badge { display: flex; gap: 8px; align-items: center; margin: -8px 0 12px; font-size: 15px; color: var(--sub); }
+#day-tabs { margin-bottom: 12px; }
+#day-tabs button { font-size: 14px; padding: 8px 2px; white-space: nowrap; }
+ul.queue { list-style: none; padding: 0; margin: 8px 0; }
+ul.queue li { padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 15px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+ul.queue li.warn { color: var(--warn); }
+button.small { min-height: 36px; font-size: 14px; padding: 4px 10px; margin-left: auto; }

@@ -54,13 +54,13 @@ function settingsReady(s) {
   return Boolean(gasUrl(s) && s.token);
 }
 
-async function api(action, payload) {
+async function api(action, payload, mutationId) {
   const s = settings();
   const body = JSON.stringify({
     token: s.token,
     action,
     payload: payload || {},
-    client: { role: s.role, app_version: APP_VERSION, mutation_id: crypto.randomUUID() }
+    client: { role: s.role, app_version: APP_VERSION, mutation_id: mutationId || crypto.randomUUID() }
   });
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), API_TIMEOUT_MS);
@@ -105,10 +105,12 @@ function lastSyncLabel() {
 function renderBands() {
   const box = document.getElementById('bands');
   box.replaceChildren();
-  if (!navigator.onLine) {
+  if (!navigator.onLine || sync.netFails > 0) {
     const t = lastSyncLabel();
     box.append(el('div', { class: 'band', text: t ? fmt(S.band.offlineSince, { t }) : S.band.offline }));
   }
+  if (unreachable()) box.append(el('div', { class: 'band error', text: S.error.UNREACHABLE }));
+  if (sync.alert) box.append(el('div', { class: 'band error', text: sync.alert }));
   if (ui.waitingWorker) {
     box.append(el('div', { class: 'band' },
       el('span', { text: S.band.update }),
@@ -139,7 +141,7 @@ function show(tab) {
   ui.tab = tab;
   renderTabs();
   const main = document.getElementById('main');
-  main.replaceChildren(...SCREENS[tab]());
+  main.replaceChildren(...SCREENS[tab]().filter(Boolean));
   window.scrollTo(0, 0);
 }
 
@@ -148,24 +150,7 @@ function headingList(title, items) {
 }
 
 const SCREENS = {
-  today() {
-    const s = settings();
-    const msg = el('p', { class: 'msg' });
-    const save = el('button', { class: 'primary', text: S.today.save, disabled: !s.role, onclick: () => { msg.textContent = S.stub; } });
-    if (!s.role) msg.textContent = S.today.chooseRole;
-    const ladders = Object.values(S.ladderNames).map(name => el('div', { class: 'card' },
-      el('strong', { text: name }),
-      el('div', { class: 'row' }, el('button', { text: S.today.did, disabled: true }))));
-    return [
-      el('h1', { text: S.tabs.today }),
-      el('div', { class: 'seg' }, ...S.today.dayTabs.map((d, i) => el('button', { 'aria-pressed': i === 0 ? 'true' : 'false', disabled: true, text: d }))),
-      el('h2', { text: S.today.thisWeek }),
-      ...ladders,
-      el('p', { class: 'stub', text: S.stub }),
-      el('div', { class: 'row' }, save),
-      msg
-    ];
-  },
+  today: () => renderToday(), // today.js は app.js の後に読み込む
   ladder() {
     return headingList(S.tabs.ladder, [S.ladder.current, S.ladder.next, S.ladder.parentDo, S.ladder.doneRule]);
   },
@@ -203,7 +188,10 @@ function renderSettings() {
     token.value = next.token;
     if (!settingsReady(next)) return say(S.settings.needAll, true);
     if (!store.set(KEY_SETTINGS, next)) return say(S.today.localSaveFailed, true);
+    sync.alert = '';
     await pingAndSay(say);
+    await refreshState();
+    resetQueueAndSend();
   }
 
   async function checkUpdate() {
@@ -227,18 +215,58 @@ function renderSettings() {
       el('div', { class: 'row' }, el('button', { class: 'primary', text: S.settings.saveSettings, onclick: saveSettings })),
       msg),
     el('h2', { text: S.settings.queue }),
-    el('p', { class: 'stub', text: S.stub }),
+    el('div', { id: 'queue-box' }, ...renderQueueList()),
     el('div', { class: 'row' }, el('button', { text: S.settings.checkUpdate, onclick: checkUpdate })),
     el('p', { class: 'meta', text: `${S.settings.version} ${APP_VERSION}` })
   ];
 }
 
+// 設定画面の未送信一覧（設計書 §5.2 設定）
+function renderQueueList() {
+  const q = loadQueue();
+  const label = { [Q.PENDING]: S.settings.statePending, [Q.SENDING]: S.settings.stateSending, [Q.NEEDS_CHECK]: S.badge.needsCheck };
+  const items = q.map(x => {
+    const p = x.payload;
+    const head = x.action === 'put_daily' ? `${D.md(p.date)}・${ladderName(p.ladder_id)}` : x.action;
+    return el('li', { class: x.status === Q.NEEDS_CHECK ? 'warn' : '' },
+      el('span', { text: `${head}：${label[x.status] || x.status}` }),
+      x.last_error ? el('span', { class: 'sub', text: ' ' + x.last_error }) : null,
+      x.status === Q.NEEDS_CHECK ? el('button', { class: 'small', text: S.settings.discard, onclick: () => {
+        if (!confirm(S.settings.discardConfirm)) return;
+        discardItem(x.mutation_id);
+      } }) : null);
+  });
+  const notes = store.get(KEY_STALE, []).map(n => el('li', { class: 'sub', text: `${D.md(n.date)}・${ladderName(n.ladder_id)}：${S.settings.staleNote}` }));
+  return [
+    el('p', { text: fmt(S.badge.pending, { n: q.length }) }),
+    items.length ? el('ul', { class: 'queue' }, ...items) : null,
+    el('div', { class: 'row' }, el('button', { text: S.settings.sendNow, disabled: !q.length, onclick: resetQueueAndSend })),
+    notes.length ? el('ul', { class: 'queue' }, ...notes) : null
+  ];
+}
+
+function refreshQueueList() {
+  const box = document.getElementById('queue-box');
+  if (box) box.replaceChildren(...renderQueueList().filter(Boolean));
+}
+
 async function pingAndSay(say, okText) {
   say(S.settings.checking);
   const r = await api('ping');
+  noteApiResult(r);
   renderBands();
   if (r.ok) say(okText || S.settings.connected);
   else say(errorText(r.error), true);
+}
+
+// 同期の状態が変わったとき。入力途中の「今日の記録」は描き直さない（設計書 §5.2）
+function onSyncChange() {
+  renderBands();
+  if (ui.tab === 'today' && !todayDirty()) {
+    todayUi.draft = null; // 入力前なら、届いた内容で開き直す
+    rerenderToday();
+  }
+  if (ui.tab === 'settings') refreshQueueList();
 }
 
 // ---- Service Worker ----
@@ -281,11 +309,20 @@ function start() {
     return;
   }
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
-  window.addEventListener('online', renderBands);
-  window.addEventListener('offline', renderBands);
+  prepareQueue();
+  sync.onChange = onSyncChange;
+  window.addEventListener('online', () => { sync.netFails = 0; renderBands(); flush(true); refreshState(); });
+  window.addEventListener('offline', () => { renderBands(); scheduleFlush(); });
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') return;
+    rerenderToday(); // 基準日の再計算（未保存の変更がある間は切り替えない）
+    flush(true);
+    refreshState();
+  });
   renderBands();
   show(settingsReady(settings()) ? 'today' : 'settings');
   setupWorker();
+  refreshState();
+  flush(true);
 }
 
-start();

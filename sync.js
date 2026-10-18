@@ -32,6 +32,19 @@ function saveDaily(payloads) {
   return true;
 }
 
+// ふりかえり完了：週の3行をキューへ（同じ週の未送信は畳む）。端末に書けなければ false
+function saveWeekly(payload) {
+  return saveQueue(Q.enqueue(loadQueue(), 'put_weekly', payload, crypto.randomUUID(), new Date().toISOString()));
+}
+
+// set_step の結果（または CONFLICT の現在値）を端末内の最終状態に反映する
+function applyStateRow(row) {
+  const cache = stateCache();
+  if (!cache || !cache.state || !row) return;
+  cache.state = cache.state.map(x => (x.ladder_id === row.ladder_id ? row : x));
+  store.set(KEY_CACHE, cache);
+}
+
 function noteApiResult(res) {
   if (res.ok) { sync.netFails = 0; return; }
   if (res.error.code === 'NETWORK') { if (navigator.onLine) sync.netFails += 1; return; }

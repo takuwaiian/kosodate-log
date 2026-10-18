@@ -25,9 +25,8 @@ main { padding: 16px; max-width: 640px; margin: 0 auto; }
 h1 { font-size: 22px; margin: 4px 0 16px; }
 h2 { font-size: 17px; margin: 20px 0 8px; color: var(--sub); }
 .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; margin-bottom: 12px; }
-.stub { color: var(--sub); font-size: 15px; }
 label { display: block; font-weight: 600; margin: 14px 0 6px; }
-input[type=text], input[type=url], input[type=password] {
+input[type=text], input[type=url], input[type=password], input[type=date] {
   width: 100%; font-size: 17px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: #fff; color: var(--ink);
 }
 .seg { display: flex; gap: 8px; }
@@ -71,3 +70,20 @@ ul.queue { list-style: none; padding: 0; margin: 8px 0; }
 ul.queue li { padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 15px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 ul.queue li.warn { color: var(--warn); }
 button.small { min-height: 36px; font-size: 14px; padding: 4px 10px; margin-left: auto; }
+.tag.hint { background: var(--accent); color: var(--accent-ink); }
+ul.steps { list-style: none; padding: 0; margin: 10px 0 0; }
+li.step { padding: 10px 12px; border-top: 1px solid var(--line); }
+li.step p { margin: 4px 0 0; font-size: 15px; }
+li.step.current { background: #e6f0ec; border-radius: 10px; border-top-color: transparent; }
+li.step.current strong { font-size: 18px; }
+.step-head { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.row.tight-right { margin-top: 8px; justify-content: flex-end; }
+.choices { display: flex; flex-wrap: wrap; gap: 8px; }
+.card .choices { margin-top: 8px; }
+.choices button { font-size: 15px; padding: 8px 12px; text-align: left; }
+ul.goods { margin: 0 0 8px; padding-left: 1.2em; font-size: 15px; }
+.grow { flex: 1; min-width: 0; }
+.grow label { margin-top: 0; }
+.meta.top { margin: -10px 0 12px; }
+.tag-line { font-size: 14px; color: var(--warn); margin: -4px 0 8px; }
+#tpl-out { margin-top: 12px; font-size: 14px; }

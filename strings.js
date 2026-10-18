@@ -42,7 +42,11 @@ var S = {
     setStep: 'この段にする',
     conflict: '先に変更されていました。最新の段を表示します',
     already: 'すでにこの段になっています',
-    retry: 'もう一度お試しください'
+    retry: 'もう一度お試しください',
+    // 以下は §5.2 の一覧に無い補助文言
+    stepNo: '段{n}',
+    confirmStep: '{name}を段{n}にしますか？',
+    done: '段を変えました'
   },
   review: {
     strength: '今週の強み（いいところ）',
@@ -53,7 +57,12 @@ var S = {
     done: 'ふりかえり完了',
     overwrite: 'この週は記録済み（記録者：{who} {t}）。上書きしますか？',
     askPrevWeek: '先週分として記録しますか？',
-    localOnly: '端末内の記録で表示中'
+    localOnly: '端末内の記録で表示中',
+    // 以下は §5.2 の一覧に無い補助文言
+    weekOf: '{from}〜{to} の週',
+    days: '{n}日',
+    none: 'なし',
+    needPick: '強みと、来週やってみることを選んでください'
   },
   settings: {
     role: '役割',
@@ -79,8 +88,13 @@ var S = {
     needAll: '合言葉を入れてください',
     noUpdate: '最新の版です',
     statePending: '未送信',
-    stateSending: '送信中'
-  },
-  stub: 'この画面は次の段階で作ります'
+    stateSending: '送信中',
+    from: 'はじめ',
+    to: 'おわり',
+    making: '作っています…',
+    copied: 'コピーしました',
+    needRange: '期間を確かめてください',
+    copyFailed: 'コピーできませんでした。文章を長押ししてコピーしてください'
+  }
 };
 if (typeof module !== 'undefined') module.exports = { S };

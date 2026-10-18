@@ -93,7 +93,11 @@ function errorText(err) {
 const ui = { tab: 'today', waitingWorker: null, reloading: false, userAskedReload: false };
 
 function lastSyncLabel() {
-  const iso = store.get(KEY_LAST_SYNC, '');
+  return timeLabel(store.get(KEY_LAST_SYNC, ''));
+}
+
+// ISO の時刻を「10/18 20:05」（JST）にする
+function timeLabel(iso) {
   if (!iso) return '';
   const p = new Intl.DateTimeFormat('ja-JP', {
     timeZone: 'Asia/Tokyo', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false
@@ -138,6 +142,7 @@ function renderTabs() {
 }
 
 function show(tab) {
+  if (tab === 'review') reviewUi.week = null; // 開くたびに対象週と集計を取り直す
   ui.tab = tab;
   renderTabs();
   const main = document.getElementById('main');
@@ -145,18 +150,11 @@ function show(tab) {
   window.scrollTo(0, 0);
 }
 
-function headingList(title, items) {
-  return [el('h1', { text: title }), ...items.map(t => el('h2', { text: t })), el('p', { class: 'stub', text: S.stub })];
-}
-
 const SCREENS = {
-  today: () => renderToday(), // today.js は app.js の後に読み込む
-  ladder() {
-    return headingList(S.tabs.ladder, [S.ladder.current, S.ladder.next, S.ladder.parentDo, S.ladder.doneRule]);
-  },
-  review() {
-    return headingList(S.tabs.review, [S.review.didDays, S.review.reactionCounts, S.review.goodMoments, S.review.strength, S.review.nextWeek]);
-  },
+  // today.js・ladder.js・review.js は app.js の後に読み込む
+  today: () => renderToday(),
+  ladder: () => renderLadder(),
+  review: () => renderReview(),
   settings: renderSettings
 };
 
@@ -214,11 +212,60 @@ function renderSettings() {
         el('label', { for: 'set-url', text: S.settings.url }), url),
       el('div', { class: 'row' }, el('button', { class: 'primary', text: S.settings.saveSettings, onclick: saveSettings })),
       msg),
+    el('h2', { text: S.settings.makeTemplate }),
+    renderTemplateBox(),
     el('h2', { text: S.settings.queue }),
     el('div', { id: 'queue-box' }, ...renderQueueList()),
     el('div', { class: 'row' }, el('button', { text: S.settings.checkUpdate, onclick: checkUpdate })),
     el('p', { class: 'meta', text: `${S.settings.version} ${APP_VERSION}` })
   ];
+}
+
+// 観察事実テンプレ（設計書 §5.2 設定）。iOS はボタン操作の直後しかコピーできないので、作る→コピーの2段階
+function renderTemplateBox() {
+  const cfg = (stateCache() || {}).config || {};
+  const today = D.todayJst();
+  const from = el('input', { id: 'tpl-from', type: 'date', value: cfg.plan_start || D.addDays(today, -27), max: today });
+  const to = el('input', { id: 'tpl-to', type: 'date', value: today, max: today });
+  const out = el('textarea', { id: 'tpl-out', rows: '10', readonly: true, hidden: true });
+  const msg = el('p', { class: 'msg' });
+  const say = (text, isError) => { msg.textContent = text; msg.className = isError ? 'msg error' : 'msg'; };
+  const copyBtn = el('button', { text: S.settings.copy, hidden: true, onclick: async () => {
+    try {
+      await navigator.clipboard.writeText(out.value);
+      say(S.settings.copied);
+    } catch (e) {
+      out.focus();
+      out.setSelectionRange(0, out.value.length);
+      let ok = false;
+      try { ok = document.execCommand('copy'); } catch (e2) { /* 古い方式も使えなければ長押しを案内 */ }
+      say(ok ? S.settings.copied : S.settings.copyFailed, !ok);
+    }
+  } });
+  const make = el('button', { class: 'primary', text: S.settings.makeTemplate, onclick: async () => {
+    if (!from.value || !to.value || from.value > to.value) return say(S.settings.needRange, true);
+    say(S.settings.making);
+    make.disabled = true;
+    const res = await api('export_summary', { from: from.value, to: to.value });
+    noteApiResult(res);
+    make.disabled = false;
+    renderBands();
+    if (!res.ok) {
+      const c = res.error.code;
+      return say(['AUTH', 'APP_OUTDATED'].includes(c) ? S.error[c] : S.error.needOnline, true);
+    }
+    out.value = res.data.text;
+    out.hidden = false;
+    copyBtn.hidden = false;
+    say('');
+  } });
+  return el('div', { class: 'card' },
+    el('div', { class: 'row tight' },
+      el('div', { class: 'grow' }, el('label', { for: 'tpl-from', text: S.settings.from }), from),
+      el('div', { class: 'grow' }, el('label', { for: 'tpl-to', text: S.settings.to }), to)),
+    el('div', { class: 'row' }, make, copyBtn),
+    out,
+    msg);
 }
 
 // 設定画面の未送信一覧（設計書 §5.2 設定）
@@ -227,7 +274,8 @@ function renderQueueList() {
   const label = { [Q.PENDING]: S.settings.statePending, [Q.SENDING]: S.settings.stateSending, [Q.NEEDS_CHECK]: S.badge.needsCheck };
   const items = q.map(x => {
     const p = x.payload;
-    const head = x.action === 'put_daily' ? `${D.md(p.date)}・${ladderName(p.ladder_id)}` : x.action;
+    const head = x.action === 'put_daily' ? `${D.md(p.date)}・${ladderName(p.ladder_id)}`
+      : x.action === 'put_weekly' ? `${D.md(p.week_start)}・${S.tabs.review}` : x.action;
     return el('li', { class: x.status === Q.NEEDS_CHECK ? 'warn' : '' },
       el('span', { text: `${head}：${label[x.status] || x.status}` }),
       x.last_error ? el('span', { class: 'sub', text: ' ' + x.last_error }) : null,
@@ -266,6 +314,8 @@ function onSyncChange() {
     todayUi.draft = null; // 入力前なら、届いた内容で開き直す
     rerenderToday();
   }
+  if (ui.tab === 'ladder') rerenderLadder();
+  if (ui.tab === 'review') rerenderReview();
   if (ui.tab === 'settings') refreshQueueList();
 }
 
